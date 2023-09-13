@@ -1,9 +1,5 @@
 
-import type {
-    CommanderRequest,
-    SuggestionResponse,
-    HTTPValidationError
-} from './models';
+import type { CommanderRequest, SuggestionResponse, HTTPValidationError } from './models';
 
 const BASE_URL = 'http://localhost:8000/api';  // Assuming the API is hosted at the same domain
 
