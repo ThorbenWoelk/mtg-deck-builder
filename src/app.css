@@ -1,0 +1,123 @@
+:root {
+    --primary-bg-color: #1a1a1a;
+    --secondary-bg-color: #292929;
+    --tertiary-bg-color: #3f3f3f;
+    --border-color: #5c5c5c;
+    --primary-text-color: #e2e2e2;
+    --secondary-text-color: #e6e6e6;
+    --tertiary-text-color: #b5b5b5;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: var(--primary-bg-color);
+    color: var(--primary-text-color);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+header {
+    text-align: center;
+    padding: 20px;
+    background-color: var(--secondary-bg-color);
+    border-bottom: 3px solid var(--border-color);
+}
+
+header img {
+    border-radius: 50%;
+}
+
+form {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    border: 3px solid var(--border-color);
+    border-radius: 10px;
+}
+
+button {
+    background-color: var(--secondary-bg-color);
+    border: none;
+    padding: 10px 15px;
+    color: var(--primary-text-color);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin: 5px 0;
+}
+
+button:hover {
+    background-color: #444444;
+}
+
+h2, h3 {
+    text-align: center;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    margin: 10px 0;
+}
+
+.card-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.mtg-card {
+    background-color: var(--tertiary-bg-color);
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px;
+    width: 200px;
+    box-shadow: 0px 0px 15px #000;
+    font-size: 0.9rem;
+}
+
+.mtg-card h3 {
+    text-align: center;
+    margin-top: 0;
+    color: var(--secondary-text-color);
+}
+
+.mtg-card p {
+    color: var(--tertiary-text-color);
+}
+
+.deck-list {
+    margin: 20px 0;
+}
+
+.deck-list li {
+    background-color: var(--tertiary-bg-color);
+    padding: 5px 10px;
+    border-radius: 5px;
+    margin: 5px 0;
+    font-size: 0.9rem;
+}
+
+label {
+    display: block;
+    margin: 10px 0;
+}
+
+input {
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 5px;
+}
