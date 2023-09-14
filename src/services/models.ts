@@ -1,6 +1,6 @@
 export interface CommanderRequest {
     commander_name: string;
-    cards_in_deck?: string[];
+    cards?: string[];
 }
 
 export interface HTTPValidationError {

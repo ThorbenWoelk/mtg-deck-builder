@@ -1,157 +1,227 @@
 <script>
-import { onMount } from 'svelte';
-let decks = [];
+    import {onMount} from 'svelte';
+    import {fetchDecks, createDeck, updateDeck, deleteDeck, suggestCard} from '../../services/api';
 
-onMount(async () => {
-    const response = await fetch('/api/decks');
-    if (response.ok) {
-        decks = await response.json();
+    let decks = [];
+    let editingDeckId = null;
+    let editingCommanderName = '';
+    let editingCards = '';
+    let suggestedCards = [];
+    let newCards = [];
+    let selectedDeckForSuggestions = null;
+    let showEditModal = false;
+    let showDeleteModal = false;
+    let deckIdToDelete = null;
+    let newCommanderName = '';
+    let showCreateModal = false;
+    let cardToAdd = '';
+
+
+    onMount(async () => {
+        try {
+            decks = await fetchDecks();
+        } catch (error) {
+            console.error('Error fetching decks:', error);
+        }
+    });
+
+    async function handleCreateDeck() {
+        try {
+            const newDeck = await createDeck({
+                commander_name: newCommanderName,
+                cards: newCards // Assuming cards are comma-separated
+            });
+            decks = [...decks, newDeck];
+        } catch (error) {
+            console.error('Error creating deck:', error);
+        }
     }
-});
+
+    function addCardToEditingDeck() {
+        if (cardToAdd && !editingCards.includes(cardToAdd)) {
+            editingCards = `${editingCards},${cardToAdd}`;
+            cardToAdd = '';  // Reset cardToAdd
+        }
+    }
+
+    function startEditing(deck) {
+        editingDeckId = deck.id;
+        editingCommanderName = deck.commander_name;
+        editingCards = deck.cards.join(','); // Convert array to comma-separated string
+        showEditModal = true;  // Make the modal visible
+    }
+
+
+    async function saveEditedDeck() {
+        try {
+            const updatedDeck = await updateDeck(editingDeckId, {
+                commander_name: editingCommanderName,
+                cards: editingCards.split('\n')
+            });
+            const deckIndex = decks.findIndex(deck => deck.id === editingDeckId);
+            decks[deckIndex] = updatedDeck;
+            editingDeckId = null; // Reset editing state
+        } catch (error) {
+            console.error('Error updating deck:', error);
+        }
+    }
+
+    async function handleDeleteDeck(deckId) {
+        try {
+            await deleteDeck(deckId);
+            decks = decks.filter(deck => deck.id !== deckId);
+        } catch (error) {
+            console.error('Error deleting deck:', error);
+        }
+    }
+
+    async function getCardSuggestions(deck) {
+        try {
+            selectedDeckForSuggestions = deck;
+            suggestedCards = await suggestCard({
+                commander_name: deck.commander_name,
+                cards: deck.cards
+            });
+        } catch (error) {
+            console.error('Error fetching card suggestions:', error);
+        }
+    }
+
+    function addSuggestedCardToDeck(card) {
+        if (!selectedDeckForSuggestions.cards.includes(card)) {
+            selectedDeckForSuggestions.cards.push(card);
+        }
+    }
+
+
 </script>
 
-<h1>Decks</h1>
+<h1>Decks
+    <button on:click={() => showCreateModal = true}>Create Deck</button>
+</h1>
 
 <ul>
     {#each decks as deck}
         <li>
-            <strong>{deck.commander_name}</strong> - {deck.cards_in_deck.length} cards
-            <button>Edit</button>
-            <button>Delete</button>
-            <button>Get Card Suggestions</button>
+            <strong>{deck.commander_name}</strong> - {deck.cards.length} cards
+            <button on:click={() => startEditing(deck)}>Edit</button>
+            <button on:click={() => handleDeleteDeck(deck.id)}>Delete</button>
         </li>
     {/each}
 </ul>
 
-<!-- We'll add more functionalities below this -->
 
-<h2>Create New Deck</h2>
-<input bind:value={newCommanderName} placeholder="Commander Name" />
-<textarea bind:value={newCards} placeholder="Cards (comma-separated)"></textarea>
-<button on:click={createDeck}>Create Deck</button>
-
-<script>
-let newCommanderName = '';
-let newCards = '';
-
-async function createDeck() {
-    const response = await fetch('/api/decks', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            commander_name: newCommanderName,
-            cards_in_deck: newCards.split(',') // Assuming cards are comma-separated
-        })
-    });
-
-    if (response.ok) {
-        const newDeck = await response.json();
-        decks = [...decks, newDeck];
-    }
-}
-</script>
-
-{#if editingDeckId}
-    <h2>Edit Deck</h2>
-    <input bind:value={editingCommanderName} placeholder="Commander Name" />
-    <textarea bind:value={editingCards} placeholder="Cards (comma-separated)"></textarea>
-    <button on:click={saveEditedDeck}>Save Changes</button>
-    <button on:click={() => editingDeckId = null}>Cancel</button>
+{#if showCreateModal}
+    <div class="overlay"></div>
+    <div class="modal">
+        <h3>Create Deck</h3>
+        <div>
+            <label>Commander Name: </label>
+            <input bind:value={newCommanderName}/>
+        </div>
+        <button on:click={handleCreateDeck}>Create</button>
+        <button on:click={() => showCreateModal = false}>Cancel</button>
+    </div>
 {/if}
 
-<script>
-let editingDeckId = null;
-let editingCommanderName = '';
-let editingCards = '';
 
-function startEditing(deck) {
-    editingDeckId = deck.id;
-    editingCommanderName = deck.commander_name;
-    editingCards = deck.cards_in_deck.join(','); // Convert array to comma-separated string
-}
-
-async function saveEditedDeck() {
-    const response = await fetch(`/api/decks/${editingDeckId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            commander_name: editingCommanderName,
-            cards_in_deck: editingCards.split(',')
-        })
-    });
-
-    if (response.ok) {
-        const updatedDeck = await response.json();
-        const deckIndex = decks.findIndex(deck => deck.id === editingDeckId);
-        decks[deckIndex] = updatedDeck;
-        editingDeckId = null; // Reset editing state
-    }
-}
-</script>
-
-<script>
-async function deleteDeck(deckId) {
-    const shouldDelete = confirm('Are you sure you want to delete this deck?');
-    if (shouldDelete) {
-        const response = await fetch(`/api/decks/${deckId}`, {
-            method: 'DELETE'
-        });
-
-        if (response.ok) {
-            decks = decks.filter(deck => deck.id !== deckId);
-        }
-    }
-}
-</script>
-
-<!-- ... Previous HTML content ... -->
-
-<!-- In the list of decks, update the Delete button to call deleteDeck -->
-<!-- <button onclick={() => deleteDeck(deck.id)}>Delete</button> -->
-
-<script>
-let suggestedCards = [];
-let selectedDeckForSuggestions = null;
-
-async function getCardSuggestions(deck) {
-    selectedDeckForSuggestions = deck;
-    const response = await fetch(`/api/suggest`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            commander_name: deck.commander_name,
-            cards_in_deck: deck.cards_in_deck
-        })
-    });
-
-    if (response.ok) {
-        suggestedCards = await response.json();
-    }
-}
-
-function addSuggestedCardToDeck(card) {
-    if (!selectedDeckForSuggestions.cards_in_deck.includes(card)) {
-        selectedDeckForSuggestions.cards_in_deck.push(card);
-    }
-}
-</script>
-
-<!-- ... Previous HTML content ... -->
-
-{#if suggestedCards.length}
-    <h2>Suggested Cards for {selectedDeckForSuggestions.commander_name}</h2>
-    <ul>
-        {#each suggestedCards as card}
-            <li>
-                {card}
-                <button on:click={() => addSuggestedCardToDeck(card)}>Add to Deck</button>
-            </li>
-        {/each}
-    </ul>
+{#if showEditModal}
+    <div class="overlay"></div>
+    <div class="modal">
+        <h3>Edit Deck</h3>
+        <div>
+            <label>Commander Name: </label>
+            <input bind:value={editingCommanderName}/>
+        </div>
+        <div>
+            <label>Cards: </label>
+            <textarea bind:value={editingCards}></textarea>
+        </div>
+        <button on:click={saveEditedDeck}>Save</button>
+        <button on:click={() => showEditModal = false}>Cancel</button>
+    </div>
 {/if}
+
+
+{#if showDeleteModal}
+    <div class="overlay"></div>
+    <div class="modal">
+        <h3>Confirm Deletion</h3>
+        <p>Are you sure you want to delete this deck?</p>
+        <button on:click={() => { deleteDeck(deckIdToDelete); showDeleteModal = false; }}>Yes</button>
+        <button on:click={() => showDeleteModal = false}>No</button>
+    </div>
+{/if}
+
+<ul>
+    {#each decks as deck}
+        <li>
+            <strong on:click={() => deck.expanded = !deck.expanded}>{deck.commander_name}</strong>
+            - {deck.cards.length} cards
+            ...
+            {#if deck.expanded}
+                <ul>
+                    {#each deck.cards as card}
+                        <li>{card}</li>
+                    {/each}
+                </ul>
+            {/if}
+        </li>
+    {/each}
+
+</ul>
+
+<style>
+    ul {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    li {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+    }
+
+    button {
+        margin-left: 10px;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    button:hover {
+        background-color: #ddd;
+    }
+
+    .modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 20px;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        z-index: 1000;
+    }
+
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 999;
+    }
+
+    li ul {
+        margin-top: 10px;
+        list-style-type: circle;
+    }
+
+</style>

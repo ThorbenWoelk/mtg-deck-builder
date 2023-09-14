@@ -1,5 +1,4 @@
-
-import type { CommanderRequest, SuggestionResponse, HTTPValidationError } from './models';
+import type {CommanderRequest, SuggestionResponse, HTTPValidationError} from './models';
 
 const BASE_URL = 'http://localhost:8000';  // Assuming the API is hosted at the same domain
 
@@ -20,8 +19,8 @@ export async function suggestCard(data: CommanderRequest): Promise<SuggestionRes
     }
 }
 
-export async function createDeck(deck: {name: string, cards: string[]}) {
-    const response = await fetch(`${BASE_URL}/deck`, {
+export async function createDeck(deck: { commander_name: string, cards: string[] }) {
+    const response = await fetch(`${BASE_URL}/decks`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -32,4 +31,39 @@ export async function createDeck(deck: {name: string, cards: string[]}) {
         throw new Error(await response.text());
     }
     return await response.json();
+}
+
+export async function fetchDecks(): Promise<any[]> {
+    const response = await fetch(`${BASE_URL}/decks`);
+    if (response.ok) {
+        return await response.json();
+    } else {
+        throw new Error(await response.text());
+    }
+}
+
+export async function updateDeck(deckId: number, data: { commander_name: string, cards: string[] }): Promise<any> {
+    const response = await fetch(`${BASE_URL}/decks/${deckId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    });
+
+    if (response.ok) {
+        return await response.json();
+    } else {
+        throw new Error(await response.text());
+    }
+}
+
+export async function deleteDeck(deckId: number): Promise<void> {
+    const response = await fetch(`${BASE_URL}/decks/${deckId}`, {
+        method: 'DELETE'
+    });
+
+    if (!response.ok) {
+        throw new Error(await response.text());
+    }
 }

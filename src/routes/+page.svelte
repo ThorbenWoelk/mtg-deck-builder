@@ -35,7 +35,7 @@
         try {
             const response: SuggestionResponse = await suggestCard({
                 commander_name: commanderName,
-                cards_in_deck: [...cardsInDeck.split(',').map(card => card.trim()), ...currentDeck]
+                cards: [...cardsInDeck.split(',').map(card => card.trim()), ...currentDeck]
             });
             suggestedCards = response.suggestedCards;
             error = null;
