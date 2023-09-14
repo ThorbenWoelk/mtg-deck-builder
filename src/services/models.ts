@@ -1,4 +1,3 @@
-
 export interface CommanderRequest {
     commander_name: string;
     cards_in_deck?: string[];
@@ -9,11 +8,16 @@ export interface HTTPValidationError {
 }
 
 export interface SuggestionResponse {
-    suggestedCards: Record<string, string | number | number>[];
+    suggestedCards: Record<string, string | number>[];
 }
 
 export interface ValidationError {
     loc: (string | number)[];
     msg: string;
     type: string;
+}
+
+export interface Card {
+    id: number;
+    name: string;
 }
