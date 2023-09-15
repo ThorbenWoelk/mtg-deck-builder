@@ -1,30 +1,41 @@
 <script lang="ts">
     import {suggestCard} from '../services/api';
-    import type {SuggestionResponse} from '../services/models';
+    import type {SuggestionResponse, CardObject, SuggestedCard} from '../services/models';
+    import Card from './Card.svelte';
 
     let commanderName: string = '';
     let cardsInDeck: string = '';
-    let suggestedCards: Record<string, string | number>[] = [];
+    let suggestedCards: SuggestedCard[] = [];
 
-    let currentDeck: string[] = [];
+    let currentDeck: (CardObject | { small_image_url: string | number; name: string | number })[] = [];
     let showDeckList: boolean = false;
 
 
     function addToDeck() {
         if (cardsInDeck.trim()) {
-            currentDeck = [...currentDeck, ...cardsInDeck.split('\n').map(card => card.trim())];
+            let cardsToAdd: CardObject[] = cardsInDeck.split('\n').map(cardName => ({
+                name: cardName.trim(),
+                small_image_url: undefined  // or your default URL
+            }));
+            currentDeck = [...currentDeck, ...cardsToAdd];
             cardsInDeck = '';
         }
     }
 
-
-    function addSuggestedCardToDeck(card: string) {
-        currentDeck = [...currentDeck, card];
-        suggestedCards = suggestedCards.filter(suggested => suggested !== card);
+    function addSuggestedCardToDeck(cardName: string) {
+        const card = suggestedCards.find(s => s.name === cardName);
+        if (card) {
+            const cardToAdd: { small_image_url: string | undefined; name: string } = {
+                name: card.name,
+                small_image_url: card.small_image_url
+            };
+            currentDeck = [...currentDeck, cardToAdd];
+            suggestedCards = suggestedCards.filter(suggested => suggested.name !== cardName);
+        }
     }
 
     function removeFromDeck(cardName: string) {
-        currentDeck = currentDeck.filter(card => card !== cardName);
+        currentDeck = currentDeck.filter(card => card.name !== cardName);
     }
 
 
@@ -35,7 +46,7 @@
         try {
             const response: SuggestionResponse = await suggestCard({
                 commander_name: commanderName,
-                cards: [...cardsInDeck.split(',').map(card => card.trim()), ...currentDeck]
+                cards: [...cardsInDeck.split(',').map(card => card.trim()), ...currentDeck.map(card => card.name)]
             });
             suggestedCards = response.suggestedCards;
             error = null;
@@ -44,8 +55,61 @@
         }
     }
 </script>
+<p>Enter details to get card suggestions:</p>
+
+<form on:submit|preventDefault={handleSubmit}>
+    <label>
+        Commander Name:
+        <input type="text" bind:value={commanderName} required placeholder="e.g. Uro, Titan of Nature's Wrath">
+    </label>
+
+    <label>
+        Add cards to deck:
+        <textarea bind:value={cardsInDeck} placeholder="e.g. Sol Ring, Lightning Bolt"></textarea>
+    </label>
+
+    <button type="submit" disabled={isLoading}>
+        {isLoading ? 'Loading...' : 'Get Suggestions'}
+    </button>
+
+    <button type="button" on:click={addToDeck}>Add to Current Deck</button>
+</form>
+<!-- Decklist section -->
+<h1>Decklist</h1>
+<div class="decklist">
+    <!-- Commander Card -->
+    <div class="commander card">
+        {commanderName}
+        <!-- Additional styling and details for the commander card go here -->
+    </div>
+
+    <!-- Rest of the Deck -->
+    {#each currentDeck as card}
+        <Card card={card} onAction={() => removeFromDeck(card.name)} actionIcon="-"/>
+    {/each}
+</div>
+
+<!-- Suggested cards section -->
+<h2>Suggested Cards</h2>
+<div class="suggested-cards">
+    {#each suggestedCards as card}
+        <Card card={card} onAction={() => addSuggestedCardToDeck(card.name)} actionIcon="+"/>
+    {/each}
+</div>
+
+{#if error}
+    <p class="error">{error}</p>
+{/if}
+
+
 
 <style>
+    .card img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
     .decklist, .suggested-cards {
         display: flex;
         flex-wrap: wrap;
@@ -84,86 +148,3 @@
         transition: opacity 0.3s;
     }
 </style>
-
-<!-- Decklist section -->
-<h1>Decklist</h1>
-<div class="decklist">
-    <!-- Commander Card -->
-    <div class="commander card">
-        {commanderName}
-        <!-- Additional styling and details for the commander card go here -->
-    </div>
-
-    <!-- Rest of the Deck -->
-    {#each currentDeck as card}
-        <div class="card">
-            {card}
-            <!-- You can have a small remove icon/button here -->
-        </div>
-    {/each}
-</div>
-
-<!-- Suggested cards section -->
-<h2>Suggested Cards</h2>
-<div class="suggested-cards">
-    {#each suggestedCards as card (card)}
-        <div class="suggested-card card">
-            <span class="add-icon" on:click={() => addSuggestedCardToDeck(card.name)}>+</span>
-            {card.name}
-            <!-- Other details of the suggested card can go here -->
-        </div>
-    {/each}
-</div>
-
-<!-- Errors or other UI components below -->
-{#if error}
-    <p class="error">{error}</p>
-{/if}
-
-
-
-<div class="deck-list-widget">
-    <button on:click={() => showDeckList = !showDeckList}>
-        {#if showDeckList}Hide Deck List{:else}Show Deck List{/if}
-    </button>
-</div>
-
-<h1>Magic The Gathering Commander Deck Suggestions</h1>
-<p>Enter details to get card suggestions:</p>
-
-<form on:submit|preventDefault={handleSubmit}>
-    <label>
-        Commander Name:
-        <input type="text" bind:value={commanderName} required placeholder="e.g. Uro, Titan of Nature's Wrath">
-    </label>
-
-    <label>
-        Add cards to deck:
-        <textarea bind:value={cardsInDeck} placeholder="e.g. Forest, Swamp, Lightning Bolt"></textarea>
-    </label>
-
-    <button type="submit" disabled={isLoading}>
-        {isLoading ? 'Loading...' : 'Get Suggestions'}
-    </button>
-
-    <button type="button" on:click={addToDeck}>Add to Current Deck</button>
-</form>
-
-{#if suggestedCards.length}
-    <h2>Suggested Cards:</h2>
-    <ul>
-        {#each suggestedCards as card (card)}
-            <li>
-                <strong>{card.name}</strong>
-                <div class="suggested-card-stats">
-                    <span>Number of Decks: {card.num_decks}</span>
-                    <span>Popularity: {card.percentage_popularity.toFixed(2)}%</span>
-                </div>
-            </li>
-        {/each}
-    </ul>
-{/if}
-
-{#if error}
-    <p class="error">{error}</p>
-{/if}

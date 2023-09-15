@@ -2,7 +2,7 @@ import type {CommanderRequest, SuggestionResponse, HTTPValidationError} from './
 
 const BASE_URL = 'http://localhost:8000';  // Assuming the API is hosted at the same domain
 
-export async function suggestCard(data: CommanderRequest): Promise<SuggestionResponse> {
+export async function suggestCard(data: { cards: (string | number)[]; commander_name: string }): Promise<SuggestionResponse> {
     const response = await fetch(`${BASE_URL}/suggest`, {
         method: 'POST',
         headers: {
