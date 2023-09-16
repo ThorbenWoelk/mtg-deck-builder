@@ -1,52 +1,72 @@
 <script lang="ts">
-    import {suggestCard} from '../services/api';
+    import {onMount} from 'svelte';
+    import {fetchDecks, suggestCard} from '../services/api';
     import type {SuggestionResponse, CardObject, SuggestedCard} from '../services/models';
     import Card from './Card.svelte';
+    import {addToDeck} from '../services/api';  // Import the API function
 
-    let commanderName: string = '';
-    let cardsInDeck: string = '';
+    let decks = [];
+    let selectedDeckId: number | null = null;
+    let currentDeck: CardObject[] = [];
     let suggestedCards: SuggestedCard[] = [];
-
-    let currentDeck: (CardObject | { small_image_url: string | number; name: string | number })[] = [];
-    let showDeckList: boolean = false;
-
-
-    function addToDeck() {
-        if (cardsInDeck.trim()) {
-            let cardsToAdd: CardObject[] = cardsInDeck.split('\n').map(cardName => ({
-                name: cardName.trim(),
-                small_image_url: undefined  // or your default URL
-            }));
-            currentDeck = [...currentDeck, ...cardsToAdd];
-            cardsInDeck = '';
-        }
-    }
-
-    function addSuggestedCardToDeck(cardName: string) {
-        const card = suggestedCards.find(s => s.name === cardName);
-        if (card) {
-            const cardToAdd: { small_image_url: string | undefined; name: string } = {
-                name: card.name,
-                small_image_url: card.small_image_url
-            };
-            currentDeck = [...currentDeck, cardToAdd];
-            suggestedCards = suggestedCards.filter(suggested => suggested.name !== cardName);
-        }
-    }
-
-    function removeFromDeck(cardName: string) {
-        currentDeck = currentDeck.filter(card => card.name !== cardName);
-    }
-
-
+    let commanderName: string = '';
     let error: string | null = null;
     let isLoading = false;
 
-    async function handleSubmit() {
+    onMount(async () => {
+        try {
+            decks = await fetchDecks();
+        } catch (err) {
+            error = err.message;
+        }
+    });
+
+    async function addSuggestedCardToDeck(cardName: string) {
+        const card = suggestedCards.find(s => s.name === cardName);
+        if (card && selectedDeckId) {
+            try {
+                // Make API call to add the card to the deck
+                await addToDeck(selectedDeckId, card);
+
+                // Update the local state
+                const cardToAdd: { small_image_url: string | undefined; name: string } = {
+                    name: card.name,
+                    small_image_url: card.small_image_url
+                };
+                currentDeck = [...currentDeck, cardToAdd];
+
+                // Update the decks array to reflect the new card addition
+                const deckIndex = decks.findIndex(deck => deck.id === selectedDeckId);
+                if (deckIndex !== -1) {
+                    decks[deckIndex].cards = [...decks[deckIndex].cards, card.name];
+                    decks = decks.slice();  // Create a shallow copy to trigger reactivity
+                }
+
+                // Optionally, remove the card from the suggested list after adding
+                suggestedCards = suggestedCards.filter(suggested => suggested.name !== cardName);
+            } catch (err) {
+                error = err.message;
+            }
+        }
+    }
+
+
+    function handleDeckChange() {
+        const selectedDeck = decks.find(deck => deck.id === selectedDeckId);
+        if (selectedDeck) {
+            commanderName = selectedDeck.commander_name;
+            currentDeck = selectedDeck.cards.map(cardName => ({
+                name: cardName.trim(),
+                small_image_url: undefined  // or your default URL
+            }));
+        }
+    }
+
+    async function handleSuggest() {
         try {
             const response: SuggestionResponse = await suggestCard({
                 commander_name: commanderName,
-                cards: [...cardsInDeck.split(',').map(card => card.trim()), ...currentDeck.map(card => card.name)]
+                cards: currentDeck.map(card => card.name)
             });
             suggestedCards = response.suggestedCards;
             error = null;
@@ -55,41 +75,19 @@
         }
     }
 </script>
-<p>Enter details to get card suggestions:</p>
 
-<form on:submit|preventDefault={handleSubmit}>
-    <label>
-        Commander Name:
-        <input type="text" bind:value={commanderName} required placeholder="e.g. Uro, Titan of Nature's Wrath">
-    </label>
-
-    <label>
-        Add cards to deck:
-        <textarea bind:value={cardsInDeck} placeholder="e.g. Sol Ring, Lightning Bolt"></textarea>
-    </label>
-
-    <button type="submit" disabled={isLoading}>
-        {isLoading ? 'Loading...' : 'Get Suggestions'}
-    </button>
-
-    <button type="button" on:click={addToDeck}>Add to Current Deck</button>
-</form>
-<!-- Decklist section -->
-<h1>Decklist</h1>
-<div class="decklist">
-    <!-- Commander Card -->
-    <div class="commander card">
-        {commanderName}
-        <!-- Additional styling and details for the commander card go here -->
-    </div>
-
-    <!-- Rest of the Deck -->
-    {#each currentDeck as card}
-        <Card card={card} onAction={() => removeFromDeck(card.name)} actionIcon="-"/>
+<!-- Deck Selector -->
+<select bind:value={selectedDeckId} on:change={handleDeckChange}>
+    <option value="">-- Select a deck --</option>
+    {#each decks as deck (deck.id)}
+        <option value={deck.id}>{deck.commander_name} - {deck.cards.length} cards</option>
     {/each}
-</div>
+</select>
 
-<!-- Suggested cards section -->
+<button on:click={handleSuggest} disabled={isLoading}>
+    {isLoading ? 'Loading...' : 'Get Suggestions'}
+</button>
+
 <h2>Suggested Cards</h2>
 <div class="suggested-cards">
     {#each suggestedCards as card}
@@ -100,8 +98,6 @@
 {#if error}
     <p class="error">{error}</p>
 {/if}
-
-
 
 <style>
     .card img {

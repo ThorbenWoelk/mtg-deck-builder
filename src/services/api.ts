@@ -1,4 +1,4 @@
-import type {CommanderRequest, SuggestionResponse, HTTPValidationError} from './models';
+import type {CommanderRequest, SuggestionResponse, HTTPValidationError, SuggestedCard} from './models';
 
 const BASE_URL = 'http://localhost:8000';  // Assuming the API is hosted at the same domain
 
@@ -66,4 +66,21 @@ export async function deleteDeck(deckId: number): Promise<void> {
     if (!response.ok) {
         throw new Error(await response.text());
     }
+}
+
+export async function addToDeck(deckId: number, card: SuggestedCard) {
+    const response = await fetch(`${BASE_URL}/decks/${deckId}/cards`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ cards: [card.name] })
+    });
+
+    if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to add card to deck');
+    }
+
+    return await response.json();
 }
