@@ -1,21 +1,15 @@
 <script>
     import {onMount} from 'svelte';
-    import {fetchDecks, createDeck, updateDeck, deleteDeck, suggestCard} from '../../services/api';
+    import {fetchDecks, createDeck, updateDeck, deleteDeck} from '../../services/api';
 
     let decks = [];
     let editingDeckId = null;
     let editingCommanderName = '';
+    let editingName = '';
     let editingCards = '';
-    let suggestedCards = [];
-    let newCards = [];
-    let selectedDeckForSuggestions = null;
     let showEditModal = false;
-    let showDeleteModal = false;
-    let deckIdToDelete = null;
-    let newCommanderName = '';
     let showCreateModal = false;
-    let cardToAdd = '';
-
+    let newDeckName = '';
 
     onMount(async () => {
         try {
@@ -25,32 +19,37 @@
         }
     });
 
+    function cleanCardInput(input) {
+        // Return empty string if no input is provided
+        if (!input) return '';
+
+        return input.split('\n').map(line => {
+            // Split by spaces, filter out non-digit words, and then join back
+            return line.split(' ').filter(word => !/^\d+$/.test(word)).join(' ');
+        }).join('\n');
+    }
+
     async function handleCreateDeck() {
         try {
             const newDeck = await createDeck({
-                commander_name: newCommanderName,
-                cards: newCards // Assuming cards are comma-separated
+                name: newDeckName,
+                commander_name: editingCommanderName,
+                cards: editingCards ? cleanCardInput(editingCards).split('\n') : []
             });
             decks = [...decks, newDeck];
+            showCreateModal = false;
         } catch (error) {
             console.error('Error creating deck:', error);
         }
     }
 
-    function addCardToEditingDeck() {
-        if (cardToAdd && !editingCards.includes(cardToAdd)) {
-            editingCards = `${editingCards},${cardToAdd}`;
-            cardToAdd = '';  // Reset cardToAdd
-        }
-    }
-
     function startEditing(deck) {
         editingDeckId = deck.id;
+        editingName = deck.name;  // Add this line
         editingCommanderName = deck.commander_name;
-        editingCards = deck.cards.join(','); // Convert array to comma-separated string
-        showEditModal = true;  // Make the modal visible
+        editingCards = deck.cards.join(',');
+        showEditModal = true;
     }
-
 
     async function saveEditedDeck() {
         try {
@@ -60,7 +59,7 @@
             });
             const deckIndex = decks.findIndex(deck => deck.id === editingDeckId);
             decks[deckIndex] = updatedDeck;
-            editingDeckId = null; // Reset editing state
+            editingDeckId = null;
         } catch (error) {
             console.error('Error updating deck:', error);
         }
@@ -74,26 +73,6 @@
             console.error('Error deleting deck:', error);
         }
     }
-
-    async function getCardSuggestions(deck) {
-        try {
-            selectedDeckForSuggestions = deck;
-            suggestedCards = await suggestCard({
-                commander_name: deck.commander_name,
-                cards: deck.cards
-            });
-        } catch (error) {
-            console.error('Error fetching card suggestions:', error);
-        }
-    }
-
-    function addSuggestedCardToDeck(card) {
-        if (!selectedDeckForSuggestions.cards.includes(card)) {
-            selectedDeckForSuggestions.cards.push(card);
-        }
-    }
-
-
 </script>
 
 <h1>Decks
@@ -103,62 +82,13 @@
 <ul>
     {#each decks as deck}
         <li>
-            <strong>{deck.commander_name}</strong> - {deck.cards.length} cards
+            <strong on:click={() => deck.expanded = !deck.expanded}>
+                {deck.name} {deck.commander_name ? `- ${deck.commander_name}` : ''}
+            </strong>
+            - {deck.cards ? deck.cards.length : 0}
+            cards
             <button on:click={() => startEditing(deck)}>Edit</button>
             <button on:click={() => handleDeleteDeck(deck.id)}>Delete</button>
-        </li>
-    {/each}
-</ul>
-
-
-{#if showCreateModal}
-    <div class="overlay"></div>
-    <div class="modal">
-        <h3>Create Deck</h3>
-        <div>
-            <label>Commander Name: </label>
-            <input bind:value={newCommanderName}/>
-        </div>
-        <button on:click={handleCreateDeck}>Create</button>
-        <button on:click={() => showCreateModal = false}>Cancel</button>
-    </div>
-{/if}
-
-
-{#if showEditModal}
-    <div class="overlay"></div>
-    <div class="modal">
-        <h3>Edit Deck</h3>
-        <div>
-            <label>Commander Name: </label>
-            <input bind:value={editingCommanderName}/>
-        </div>
-        <div>
-            <label>Cards: </label>
-            <textarea bind:value={editingCards}></textarea>
-        </div>
-        <button on:click={saveEditedDeck}>Save</button>
-        <button on:click={() => showEditModal = false}>Cancel</button>
-    </div>
-{/if}
-
-
-{#if showDeleteModal}
-    <div class="overlay"></div>
-    <div class="modal">
-        <h3>Confirm Deletion</h3>
-        <p>Are you sure you want to delete this deck?</p>
-        <button on:click={() => { deleteDeck(deckIdToDelete); showDeleteModal = false; }}>Yes</button>
-        <button on:click={() => showDeleteModal = false}>No</button>
-    </div>
-{/if}
-
-<ul>
-    {#each decks as deck}
-        <li>
-            <strong on:click={() => deck.expanded = !deck.expanded}>{deck.commander_name}</strong>
-            - {deck.cards.length} cards
-            ...
             {#if deck.expanded}
                 <ul>
                     {#each deck.cards as card}
@@ -168,8 +98,69 @@
             {/if}
         </li>
     {/each}
-
 </ul>
+
+{#if showCreateModal}
+    <div class="overlay"></div>
+    <div class="modal">
+        <h3>Create Deck</h3>
+        <div class="modal-body">
+            <div class="row">
+                <div class="col">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <input type="text" id="name" class="form-control" bind:value={newDeckName} required
+                               minlength="2" autocomplete="off" autocapitalize="none" autocorrect="off">
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex mb-4">
+                <div class="flex-shrink-0">
+                    <!-- You can add an icon here if you want -->
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <div class="mb-3 text-nowrap">
+                        <label for="commander" class="form-label">Commander</label>
+                        <input type="text" id="commander" class="form-control" placeholder="Who is your commander?"
+                               bind:value={editingCommanderName} autocomplete="off" autocapitalize="none"
+                               autocorrect="off">
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="deckFolderId" class="form-label">Folder</label>
+                <select id="deckFolderId" class="form-select">
+                    <!-- Add options for the folder here -->
+                </select>
+            </div>
+            <button on:click={handleCreateDeck}>Create</button>
+            <button on:click={() => showCreateModal = false}>Cancel</button>
+        </div>
+    </div>
+{/if}
+
+{#if showEditModal}
+    <div class="overlay"></div>
+    <div class="modal">
+        <h3>Edit Deck</h3>
+        <div>
+            <label>Name: </label>
+            <input bind:value={editingName}/>
+        </div>
+        <div>
+            <label>Commander Name: </label>
+            <input bind:value={editingCommanderName}/>
+        </div>
+        <div>
+            <label>Add Cards: </label>
+            <textarea bind:value={editingCards}></textarea>
+        </div>
+        <button on:click={saveEditedDeck}>Save</button>
+        <button on:click={() => showEditModal = false}>Cancel</button>
+    </div>
+{/if}
 
 <style>
     ul {
@@ -195,6 +186,12 @@
 
     button:hover {
         background-color: #ddd;
+    }
+
+    .modal-body {
+        position: relative;
+        flex: 1 1 auto;
+        padding: 1rem;
     }
 
     .modal {
@@ -223,5 +220,4 @@
         margin-top: 10px;
         list-style-type: circle;
     }
-
 </style>

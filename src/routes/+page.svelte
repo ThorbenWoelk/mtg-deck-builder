@@ -80,7 +80,7 @@
 <select bind:value={selectedDeckId} on:change={handleDeckChange}>
     <option value="">-- Select a deck --</option>
     {#each decks as deck (deck.id)}
-        <option value={deck.id}>{deck.commander_name} - {deck.cards.length} cards</option>
+        <option value={deck.id}>{deck.commander_name} - {deck.cards ? deck.cards.length : 0}</option>
     {/each}
 </select>
 
