@@ -12,18 +12,29 @@
     let showCreateModal = false;
     let newDeckName = '';
 
+    let loading = true;  // State to track if data is being loaded
+
     onMount(async () => {
         try {
+            // Fetch all decks
             decks = await fetchDecks();
 
-            for (let deck of decks) {
-                deck.enrichedCards = await getCardDetails(deck.cards);
-            }
+            // Fetch card details for all decks concurrently
+            const enrichedCardsArrays = await Promise.all(
+                decks.map(deck => getCardDetails(deck.cards))
+            );
+
+            // Merge the enriched card details with the decks
+            decks = decks.map((deck, index) => ({
+                ...deck,
+                enrichedCards: enrichedCardsArrays[index]
+            }));
+
+            loading = false;  // Data has been loaded
         } catch (error) {
             console.error('Error fetching decks:', error);
         }
     });
-
 
     function cleanCardInput(input) {
         if (!input) return '';
@@ -84,32 +95,35 @@
     }
 </script>
 
-<h1>Decks
-    <button on:click={() => showCreateModal = true}>Create Deck</button>
-</h1>
+{#if loading}
+    <div>Loading decks...</div>
+{:else}
+    <h1>Decks
+        <button on:click={() => showCreateModal = true}>Create Deck</button>
+    </h1>
 
-<ul>
-    {#each decks as deck}
-        <li>
-            <button on:click={() => deck.expanded = !deck.expanded} class="expand-toggle">
-                {deck.expanded ? 'v' : '>'}
-            </button>
-            <strong>{deck.name}</strong> - {deck.commander_name}
-            - {deck.cards ? deck.cards.length : 0} cards
-            <button on:click={() => startEditing(deck)}>Edit</button>
-            <button on:click={() => handleDeleteDeck(deck.id)}>Delete</button>
-            {#if deck.expanded}
-                <ul class="decklist">
-                    {#each deck.enrichedCards as card}
-                        <Card card={card}/>
-                    {/each}
-                </ul>
-            {/if}
+    <ul>
+        {#each decks as deck}
+            <li>
+                <button on:click={() => deck.expanded = !deck.expanded} class="expand-toggle">
+                    {deck.expanded ? 'v' : '>'}
+                </button>
+                <strong>{deck.name}</strong> - {deck.commander_name}
+                - {deck.cards ? deck.cards.length : 0} cards
+                <button on:click={() => startEditing(deck)}>Edit</button>
+                <button on:click={() => handleDeleteDeck(deck.id)}>Delete</button>
+                {#if deck.expanded}
+                    <ul class="decklist">
+                        {#each deck.enrichedCards as card}
+                            <Card card={card}/>
+                        {/each}
+                    </ul>
+                {/if}
+            </li>
+        {/each}
+    </ul>
+{/if}
 
-        </li>
-
-    {/each}
-</ul>
 
 {#if showCreateModal}
     <div class="overlay"></div>
