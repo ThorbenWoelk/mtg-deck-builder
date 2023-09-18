@@ -1,6 +1,7 @@
 <script>
     import {onMount} from 'svelte';
     import {fetchDecks, createDeck, updateDeck, deleteDeck} from '../../services/api';
+    import Card from '../Card.svelte';
 
     let decks = [];
     let editingDeckId = null;
@@ -47,13 +48,18 @@
         editingDeckId = deck.id;
         editingName = deck.name;  // Add this line
         editingCommanderName = deck.commander_name;
-        editingCards = deck.cards.join(',');
+        editingCards = deck.cards.join('\n');
         showEditModal = true;
     }
 
     async function saveEditedDeck() {
+        if (!editingDeckId) {
+            console.error("Deck ID is not set!");
+            return;
+        }
         try {
             const updatedDeck = await updateDeck(editingDeckId, {
+                name: editingName,
                 commander_name: editingCommanderName,
                 cards: editingCards.split('\n')
             });
@@ -82,21 +88,22 @@
 <ul>
     {#each decks as deck}
         <li>
-            <strong on:click={() => deck.expanded = !deck.expanded}>
-                {deck.name} {deck.commander_name ? `- ${deck.commander_name}` : ''}
-            </strong>
-            - {deck.cards ? deck.cards.length : 0}
-            cards
+            <button on:click={() => deck.expanded = !deck.expanded} class="expand-toggle">
+                {deck.expanded ? 'v' : '>'}
+            </button>
+            <strong>{deck.name}</strong> - {deck.commander_name}
+            - {deck.cards ? deck.cards.length : 0} cards
             <button on:click={() => startEditing(deck)}>Edit</button>
             <button on:click={() => handleDeleteDeck(deck.id)}>Delete</button>
             {#if deck.expanded}
-                <ul>
+                <ul class="decklist">
                     {#each deck.cards as card}
-                        <li>{card}</li>
+                        <Card card={card}/>
                     {/each}
                 </ul>
             {/if}
         </li>
+
     {/each}
 </ul>
 
@@ -163,6 +170,30 @@
 {/if}
 
 <style>
+
+    .card img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    .decklist {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+    }
+
+    button.expand-toggle {
+        background: none;
+        border: none;
+        font-weight: bold;
+        cursor: pointer;
+        padding: 0;
+        margin-right: 5px; /* a bit of space between the arrow and the name */
+        font-size: larger; /* to make the arrow/icon a bit more prominent */
+    }
+
     ul {
         list-style-type: none;
         padding: 0;
@@ -205,6 +236,7 @@
         border-radius: 5px;
         z-index: 1000;
     }
+
 
     .overlay {
         position: fixed;

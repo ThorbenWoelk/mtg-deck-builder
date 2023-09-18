@@ -1,4 +1,4 @@
-import type {CommanderRequest, SuggestionResponse, HTTPValidationError, SuggestedCard} from './models';
+import type {SuggestionResponse, HTTPValidationError, SuggestedCard} from './models';
 
 const BASE_URL = 'http://localhost:8000';  // Assuming the API is hosted at the same domain
 
@@ -74,7 +74,7 @@ export async function addToDeck(deckId: number, card: SuggestedCard) {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ cards: [card.name] })
+        body: JSON.stringify({cards: [card.name]})
     });
 
     if (!response.ok) {

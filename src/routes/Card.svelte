@@ -23,12 +23,6 @@
 
 <style>
 
-    .card-name {
-        text-align: center;
-        font-size: 14px;
-        margin-top: 5px;
-    }
-
     .card-content {
         width: 100%;
         height: 100%;

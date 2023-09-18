@@ -1,8 +1,3 @@
-export interface CommanderRequest {
-    commander_name: string;
-    cards?: string[];
-}
-
 export interface HTTPValidationError {
     detail: ValidationError[];
 }
