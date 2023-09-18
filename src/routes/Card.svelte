@@ -17,7 +17,6 @@
         <div class="action-overlay">+</div>
         {card.num_decks}
         {card.percentage_popularity}
-
     </div>
 </div>
 

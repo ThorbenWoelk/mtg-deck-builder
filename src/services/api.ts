@@ -84,3 +84,28 @@ export async function addToDeck(deckId: number, card: SuggestedCard) {
 
     return await response.json();
 }
+
+interface CardDetail {
+    small_image_url: string;
+    // Add other properties if needed
+}
+
+interface CardDetailsResponse {
+    cards: CardDetail[];
+}
+
+export async function getCardDetails(cardNames: string[]): Promise<CardDetail[]> {
+    const response = await fetch(`${BASE_URL}/cards/details`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(cardNames)
+    });
+    if (response.ok) {
+        const data: CardDetailsResponse = await response.json();
+        return data.cards;
+    } else {
+        throw new Error(await response.text());
+    }
+}

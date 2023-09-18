@@ -91,7 +91,7 @@
 <h2>Suggested Cards</h2>
 <div class="suggested-cards">
     {#each suggestedCards as card}
-        <Card card={card} onAction={() => addSuggestedCardToDeck(card.name)} actionIcon="+"/>
+        <Card card={card} onAction={() => addSuggestedCardToDeck(card.name)}/>
     {/each}
 </div>
 
@@ -100,47 +100,11 @@
 {/if}
 
 <style>
-    .card img {
-        width: 100%;
-        height: auto;
-        display: block;
-    }
 
-    .decklist, .suggested-cards {
+    .suggested-cards {
         display: flex;
         flex-wrap: wrap;
         gap: 1rem;
         justify-content: center;
-    }
-
-    .commander {
-        width: 200px;
-        height: 300px;
-        position: relative;
-        border: 3px solid gold;
-    }
-
-    .card, .suggested-card {
-        width: 150px;
-        height: 250px;
-        position: relative;
-        border: 1px solid #ccc;
-        overflow: hidden;
-    }
-
-    .suggested-card:hover .add-icon {
-        opacity: 1;
-    }
-
-    .add-icon {
-        position: absolute;
-        right: 10px;
-        top: 10px;
-        background-color: #fff;
-        border-radius: 50%;
-        padding: 5px;
-        cursor: pointer;
-        opacity: 0.7;
-        transition: opacity 0.3s;
     }
 </style>

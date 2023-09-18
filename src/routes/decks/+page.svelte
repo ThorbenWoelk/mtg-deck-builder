@@ -1,6 +1,6 @@
 <script>
     import {onMount} from 'svelte';
-    import {fetchDecks, createDeck, updateDeck, deleteDeck} from '../../services/api';
+    import {fetchDecks, createDeck, updateDeck, deleteDeck, getCardDetails} from '../../services/api';
     import Card from '../Card.svelte';
 
     let decks = [];
@@ -15,17 +15,20 @@
     onMount(async () => {
         try {
             decks = await fetchDecks();
+
+            for (let deck of decks) {
+                deck.enrichedCards = await getCardDetails(deck.cards);
+            }
         } catch (error) {
             console.error('Error fetching decks:', error);
         }
     });
 
+
     function cleanCardInput(input) {
-        // Return empty string if no input is provided
         if (!input) return '';
 
         return input.split('\n').map(line => {
-            // Split by spaces, filter out non-digit words, and then join back
             return line.split(' ').filter(word => !/^\d+$/.test(word)).join(' ');
         }).join('\n');
     }
@@ -97,11 +100,12 @@
             <button on:click={() => handleDeleteDeck(deck.id)}>Delete</button>
             {#if deck.expanded}
                 <ul class="decklist">
-                    {#each deck.cards as card}
+                    {#each deck.enrichedCards as card}
                         <Card card={card}/>
                     {/each}
                 </ul>
             {/if}
+
         </li>
 
     {/each}
@@ -153,16 +157,16 @@
     <div class="modal">
         <h3>Edit Deck</h3>
         <div>
-            <label>Name: </label>
-            <input bind:value={editingName}/>
+            <label for="editName" class="form-label">Name: </label>
+            <input id="editName" bind:value={editingName}/>
         </div>
         <div>
-            <label>Commander Name: </label>
-            <input bind:value={editingCommanderName}/>
+            <label for="editCommander" class="form-label">Commander Name: </label>
+            <input id="editCommander" bind:value={editingCommanderName}/>
         </div>
         <div>
-            <label>Add Cards: </label>
-            <textarea bind:value={editingCards}></textarea>
+            <label for="editCards">Add Cards: </label>
+            <textarea id="editCards" bind:value={editingCards}></textarea>
         </div>
         <button on:click={saveEditedDeck}>Save</button>
         <button on:click={() => showEditModal = false}>Cancel</button>
@@ -170,12 +174,6 @@
 {/if}
 
 <style>
-
-    .card img {
-        width: 100%;
-        height: auto;
-        display: block;
-    }
 
     .decklist {
         display: flex;
